@@ -82,11 +82,12 @@ test('settle sets what the engine billed beyond the transcripts against the prom
     isUnpriced: false,
   })
   const others = (state: Usage) => state.rows.map(one => one.other.toFixed(2))
-  let state: Usage = { path: null, rows: [], offset: null, mark: 0, marks: {} }
+  let state: Usage = { path: null, rows: [], offset: null, mark: 0, marks: {}, rest: 0 }
 
   // First seen mid-session: the 4.00 billed before is nobody's.
   state = settle(state, 'p', [row('p1', 1)], 5, false)
   expect(others(state)).toEqual(['0.00'])
+  expect(state.rest.toFixed(2)).toBe('4.00')
   // 0.50 more billed, 0.20 of it in the transcript: 0.30 of internal calls.
   state = settle(state, 'p', [row('p1', 1.2)], 5.5, false)
   expect(others(state)).toEqual(['0.30'])
@@ -94,6 +95,8 @@ test('settle sets what the engine billed beyond the transcripts against the prom
   state = settle(state, 'p', [row('p1', 1.2)], 5.6, true)
   state = settle(state, 'p', [row('p1', 1.2), row('p2', 2)], 7.9, false)
   expect(others(state)).toEqual(['0.40', '0.30'])
+  // The rows and the rest come to the engine's total, what /cost shows.
+  expect((1.2 + 0.4 + 2 + 0.3 + state.rest).toFixed(2)).toBe('7.90')
   // With no cost ledger nothing is added.
   expect(others(settle(state, 'p', [row('p1', 1.2)], undefined, false))).toEqual(['0.00'])
 })
@@ -153,6 +156,10 @@ test('the pane lists every prompt; pressing a row reveals its prompt and beats i
   billed += 1
   await $.classic.PostToolUse({ transcript_path: PATH } as never)
   expect((await pane.find({ key: 'row:u2' }))?.props.label).toBe('  2 haiku-4-5   1.1k   1.1k      0      0   $1.02')
+
+  expect(await pane.find({ type: 'Text', text: /^etc unplaced .*\$0\.50$/ })).toBeDefined()
+  // The first prompt used a model the rate table lacks, so the sum is marked `?`.
+  expect(await pane.find({ type: 'Text', text: new RegExp(`^sum .*[?]${billed.toFixed(2)}$`) })).toBeDefined()
 
   const row = await $.ui.mount({
     plugin: 'token-panel',

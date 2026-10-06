@@ -11,7 +11,7 @@ const OPEN = { id: PANE, title: TITLE, columns: 49 }
 const WIDTH = 49
 const HEAD = ['  #', ' model    ', '     in', '    out', ' cacheR', ' cacheW', '    cost']
 const COUNTS = ['input', 'output', 'cacheRead', 'cacheWrite'] as const
-const NONE: Usage = { path: null, rows: [], offset: null, mark: 0, marks: {} }
+const NONE: Usage = { path: null, rows: [], offset: null, mark: 0, marks: {}, rest: 0 }
 const DARK: Flash = null
 const usage = atom({ plugin: 'token-panel', key: 'usage' } as const, NONE)
 const flash = atom({ plugin: 'token-panel', key: 'flash' } as const, DARK)
@@ -145,6 +145,15 @@ export const register: Register = on => {
     return next(e)
   })
 
+  // The engine billed something: count again, so the sum keeps up with /cost.
+  on('session.measure', async ($, e, next) => {
+    if (e.changed.includes('cost')) {
+      await refresh($)
+    }
+
+    return next(e)
+  })
+
   on('turn.complete', async ($, e, next) => {
     const ended = await next(e)
     await refresh($)
@@ -156,8 +165,8 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const { Box, Button, Text } = $.ui.resolve(e)
-    const { rows } = await read($, usage)
-    const room = Math.max(1, (e.viewport?.rows ?? 24) - 7)
+    const { rows, rest = 0 } = await read($, usage)
+    const room = Math.max(1, (e.viewport?.rows ?? 24) - 8)
     // Above the prompt the table spreads over the pane's width; docked it stays compact.
     const spare = e.props.placement === 'inline' ? e.props.bodyColumns - WIDTH : 0
     const gap = ' '.repeat(Math.max(0, Math.floor(spare / (HEAD.length - 1))))
@@ -181,11 +190,16 @@ export const register: Register = on => {
             />
           ))
           .slice(-room)}
+        {rest >= 0.005 && (
+          <Text dimColor wrap="truncate-end">
+            {line('etc', 'unplaced', key => (key === 'usd' ? rest : 0), false).join(gap)}
+          </Text>
+        )}
         <Text bold wrap="truncate-end">
           {line(
             'sum',
             '',
-            key => rows.reduce((sum, row) => sum + cell(row, key), 0),
+            key => rows.reduce((sum, row) => sum + cell(row, key), key === 'usd' ? rest : 0),
             rows.some(row => row.isUnpriced),
           ).join(gap)}
         </Text>

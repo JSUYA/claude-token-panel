@@ -31,6 +31,7 @@ Answer `y` to add the marketplace, then pick a scope (user scope loads it in eve
 - A subagent's tokens count toward the prompt that spawned it, priced at the subagent's own model.
 - An advisor call is counted as its own request, priced at the advisor's model.
 - Internal calls that leave no transcript row (a web search's own request, title and summary generation) are added to `cost` only: the engine's cost total is compared with the transcripts', and what it billed beyond them goes to the prompt it fell in. Their tokens are not known, so the token columns leave them out. This starts when the mod first loads in a session.
+- The `sum` row is the engine's cost total, the figure `/cost` shows. What the engine billed that no prompt's row holds (internal calls from before the mod first loaded in the session) is listed as `etc unplaced`.
 - `model` is the main loop's model for the prompt.
 - The table refreshes after each tool call and when a turn ends.
 

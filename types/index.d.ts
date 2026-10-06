@@ -26,6 +26,9 @@ export type Usage = {
   // That growth when the latest prompt was submitted, and when each prompt began.
   mark: number
   marks: Record<string, number>
+  // What the engine billed that no row holds (internal calls from before the
+  // mod first counted): with it the table's sum is the engine's total, /cost's.
+  rest: number
 }
 
 // The prompt row whose border beats after its pane row was pressed.

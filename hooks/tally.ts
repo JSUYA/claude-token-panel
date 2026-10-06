@@ -140,7 +140,7 @@ export const settle = (
   isNewPrompt: boolean,
 ): Usage => {
   if (engine === undefined) {
-    return { ...old, path, rows }
+    return { ...old, path, rows, rest: 0 }
   }
 
   const gap = engine - rows.reduce((sum, row) => sum + row.usd, 0)
@@ -160,5 +160,8 @@ export const settle = (
     row.other = Math.max(0, end - (marks[row.id] ?? end))
   })
 
-  return { path, rows, offset, mark, marks }
+  // Never below zero: a resumed session's engine total may not cover its earlier prompts.
+  const rest = Math.max(0, engine - rows.reduce((sum, row) => sum + row.usd + row.other, 0))
+
+  return { path, rows, offset, mark, marks, rest }
 }
