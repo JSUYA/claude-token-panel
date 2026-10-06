@@ -4,7 +4,7 @@ import type { EngineInterface, Register, Timer } from 'claude-code'
 import type { Flash, Row, Usage } from '../types'
 import { tally } from './tally'
 
-const PANE = 'token-cost'
+const PANE = 'token-panel'
 const TITLE = 'Claude Token Panel'
 const OPEN = { id: PANE, title: TITLE, columns: 49 }
 // Column widths in cells: 3, 10 for the model, 7 per token count, 8 for the cost.
@@ -13,8 +13,8 @@ const HEAD = ['  #', ' model    ', '     in', '    out', ' cacheR', ' cacheW', '
 const COUNTS = ['input', 'output', 'cacheRead', 'cacheWrite'] as const
 const NONE: Usage = { path: null, rows: [] }
 const DARK: Flash = null
-const usage = atom({ plugin: 'token-cost', key: 'usage' } as const, NONE)
-const flash = atom({ plugin: 'token-cost', key: 'flash' } as const, DARK)
+const usage = atom({ plugin: 'token-panel', key: 'usage' } as const, NONE)
+const flash = atom({ plugin: 'token-panel', key: 'flash' } as const, DARK)
 
 const tokens = (n: number): string =>
   n < 1000 ? String(n) : n < 1e6 ? `${(n / 1e3).toFixed(1)}k` : `${(n / 1e6).toFixed(2)}M`
@@ -63,7 +63,7 @@ const reveal = async ($: EngineInterface, uuid: string): Promise<void> => {
     .catch((error: unknown) => ({ deny: String(error) }))
 
   if (deny !== undefined) {
-    $.ui.toast(`Token cost: ${deny}`)
+    $.ui.toast(`Token panel: ${deny}`)
   }
 
   let beats = 0
@@ -113,12 +113,12 @@ export const register: Register = on => {
     if (isOpen) {
       await $.ui.close({ id: PANE })
 
-      return { text: 'Token cost pane off.' }
+      return { text: 'Token panel off.' }
     }
 
     await $.ui.open(OPEN)
 
-    return { text: 'Token cost pane on.' }
+    return { text: 'Token panel on.' }
   })
 
   on('classic.SessionStart', async ($, e, next) => {

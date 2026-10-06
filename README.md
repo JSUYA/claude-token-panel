@@ -14,14 +14,14 @@ sum            85.7k  10.0k 843.0k  86.7k   $3.29
 Requires Claude Code 2.1.287 or newer. At the prompt of a terminal session:
 
 ```
-/plugin install token-cost --marketplace JSUYA/claude-token-panel-mod
+/plugin install token-panel --marketplace JSUYA/claude-token-panel-mod
 ```
 
 Answer `y` to add the marketplace, then pick a scope (user scope loads it in every session).
 
 ## Use
 
-- `/token-cost` shows or hides the pane. The choice is remembered across sessions.
+- `/token-panel` shows or hides the pane. The choice is remembered across sessions.
 - In the fullscreen layout, on a terminal at least 110 columns wide, the pane docks beside the transcript. Otherwise it opens above the prompt and spreads its columns over the width.
 - Press a row (click it, or `ctrl+x tab`, Tab to the row, Enter) to scroll the transcript to that prompt; its border beats red for three seconds.
 

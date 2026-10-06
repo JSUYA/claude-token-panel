@@ -1,7 +1,7 @@
 {
-  "name": "token-cost",
+  "name": "token-panel",
   "version": "0.1.0",
-  "description": "A pane listing each prompt's token usage and its cost at standard API (Enterprise usage) rates; /token-cost turns it on and off",
+  "description": "A pane listing each prompt's token usage and its cost at standard API (Enterprise usage) rates; /token-panel turns it on and off",
   "author": { "name": "JunsuChoi" },
   "types": "./types/index.d.ts"
 }

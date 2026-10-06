@@ -89,11 +89,11 @@ test('the pane lists every prompt; pressing a row reveals its prompt and beats i
 
   // Above the prompt the columns spread over the width: 12 spare cells, 2 per gap.
   const wide = await $.ui.mount({
-    plugin: 'token-cost',
+    plugin: 'token-panel',
     surface: 'terminal',
     component: 'Pane',
-    requestId: 'token-cost',
-    props: { title: 'Token cost', isFocused: false, bodyColumns: 61, placement: 'inline' } as never,
+    requestId: 'token-panel',
+    props: { title: 'Token panel', isFocused: false, bodyColumns: 61, placement: 'inline' } as never,
   })
 
   expect((await wide.find({ key: 'row:u2' }))?.props.label).toBe(
@@ -102,18 +102,18 @@ test('the pane lists every prompt; pressing a row reveals its prompt and beats i
   await wide.unmount()
 
   const pane = await $.ui.mount({
-    plugin: 'token-cost',
+    plugin: 'token-panel',
     surface: 'terminal',
     component: 'Pane',
-    requestId: 'token-cost',
-    props: { title: 'Token cost', isFocused: false, bodyColumns: 40, placement: 'dock' } as never,
+    requestId: 'token-panel',
+    props: { title: 'Token panel', isFocused: false, bodyColumns: 40, placement: 'dock' } as never,
   })
 
   expect((await pane.find({ key: 'row:u1' }))?.props.label).toBe('  1 fable-5-1   3.0k   3.0k  1.00M   3.0k   ?0.41')
   expect((await pane.find({ key: 'row:u2' }))?.props.label).toBe('  2 haiku-4-5   1.1k   1.1k      0      0   $0.02')
 
   const row = await $.ui.mount({
-    plugin: 'token-cost',
+    plugin: 'token-panel',
     surface: 'terminal',
     component: 'UserMessage',
     requestId: 'u2',
@@ -133,7 +133,7 @@ test('the pane lists every prompt; pressing a row reveals its prompt and beats i
   expect(await row.find({ type: 'Text', text: 'engine' })).toBeDefined()
 })
 
-test('/token-cost closes an open pane, opens a closed one, and remembers the choice', async ($, on) => {
+test('/token-panel closes an open pane, opens a closed one, and remembers the choice', async ($, on) => {
   const calls: string[] = []
   const stored = new Map<string, unknown>()
   let isPlaced = true
@@ -141,17 +141,17 @@ test('/token-cost closes an open pane, opens a closed one, and remembers the cho
   on('store.get', (_, e) => ({ value: stored.get(e.key) }))
   on('store.set', (_, e) => (stored.set(e.key, e.value), { value: undefined }))
   on('ui.panes', () => ({
-    value: [{ id: 'token-cost', title: 'Token cost', isShown: true, isFocused: false, isPlaced }],
+    value: [{ id: 'token-panel', title: 'Token panel', isShown: true, isFocused: false, isPlaced }],
   }))
   on('ui.close', () => (calls.push('close'), { value: undefined }))
   on('ui.open', () => (calls.push('open'), { value: { isPlaced: true } }))
 
-  const run = () => $.command.run({ command: 'token-cost', args: '' } as never)
+  const run = () => $.command.run({ command: 'token-panel', args: '' } as never)
 
-  expect((await run()).text).toBe('Token cost pane off.')
+  expect((await run()).text).toBe('Token panel off.')
   expect(stored.get('isOff')).toBe(true)
   isPlaced = false
-  expect((await run()).text).toBe('Token cost pane on.')
+  expect((await run()).text).toBe('Token panel on.')
   expect(stored.get('isOff')).toBe(false)
   expect(calls).toEqual(['close', 'open'])
 })
