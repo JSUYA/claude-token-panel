@@ -8,9 +8,9 @@ const PANE = 'token-panel'
 const TITLE = 'Claude Token Panel'
 // Above the prompt the table lists five prompts: the frame asks for them, the title, the head, `etc` and `sum`.
 const LIST = 5
-const OPEN = { id: PANE, title: TITLE, columns: 49, rows: LIST + 4 }
 // Column widths in cells: 3, 10 for the model, 7 per token count, 8 for the cost.
 const WIDTH = 49
+const OPEN = { id: PANE, title: TITLE, columns: WIDTH, rows: LIST + 4 }
 const HEAD = ['  #', ' model    ', '     in', '    out', ' cacheR', ' cacheW', '    cost']
 const COUNTS = ['input', 'output', 'cacheRead', 'cacheWrite'] as const
 const NONE: Usage = { path: null, rows: [], offset: null, mark: 0, marks: {}, rest: 0 }
@@ -137,8 +137,8 @@ export const register: Register = on => {
     const isOpen = (await $.ui.panes()).some(pane => pane.id === PANE && pane.isPlaced)
 
     if (isOpen) {
+      // The pane's own `ui.close` hook below shuts it.
       await $.ui.close({ id: PANE })
-      await shut($)
 
       return { text: 'Token panel off.' }
     }
@@ -200,6 +200,7 @@ export const register: Register = on => {
     const room =
       e.props.placement === 'inline' ? LIST : Math.max(1, (e.viewport?.rows ?? 24) - 8 - 2 * inset)
     const end = rows.length - Math.min(await read($, back), Math.max(0, rows.length - room))
+    const start = Math.max(0, end - room)
     shown = room
     // Above the prompt the table spreads over the pane's width; docked it stays compact.
     const spare = e.props.placement === 'inline' ? e.props.bodyColumns - WIDTH : 0
@@ -214,16 +215,14 @@ export const register: Register = on => {
           {HEAD.join(gap)}
         </Text>
         {rows.length === 0 && <Text dimColor>No prompts yet.</Text>}
-        {rows
-          .map((row: Row, i) => (
-            <Button
-              key={`row:${row.uuid}`}
-              plain
-              label={line(String(i + 1), row.model, key => cell(row, key), row.isUnpriced).join(gap)}
-              onPress={() => reveal($, row.uuid)}
-            />
-          ))
-          .slice(Math.max(0, end - room), end)}
+        {rows.slice(start, end).map((row: Row, i) => (
+          <Button
+            key={`row:${row.uuid}`}
+            plain
+            label={line(String(start + i + 1), row.model, key => cell(row, key), row.isUnpriced).join(gap)}
+            onPress={() => reveal($, row.uuid)}
+          />
+        ))}
         {rest >= 0.005 && (
           <Text dimColor wrap="truncate-end">
             {line('etc', 'unplaced', key => (key === 'usd' ? rest : 0), false).join(gap)}

@@ -12,6 +12,7 @@ const RATES: readonly (readonly [string, number, number, number])[] = [
   ['claude-mythos-5', 10, 50, 1],
   ['claude-opus-5-5', 4, 20, 0.2],
   ['claude-opus-4-1', 15, 75, 1.5],
+  // Opus 4, `claude-opus-4-20250514`: its date follows the version.
   ['claude-opus-4-2', 15, 75, 1.5],
   ['claude-opus', 5, 25, 0.5],
   ['claude-sonnet-5', 2, 10, 0.2],

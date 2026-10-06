@@ -231,8 +231,11 @@ test('above the prompt the list shows the five newest prompts and scrolls under 
     } as never)
 
   expect(await listed()).toEqual(['3', '4', '5', '6', '7'])
+  // A row keeps its number in the session, not its place in the window.
+  expect((await pane.find({ key: 'row:u3' }))?.props.label).toMatch(/^ {2}3 /)
   await wheel(-1)
   expect(await listed()).toEqual(['2', '3', '4', '5', '6'])
+  expect((await pane.find({ key: 'row:u2' }))?.props.label).toMatch(/^ {2}2 /)
   // Past the oldest it stops.
   await wheel(-5)
   expect(await listed()).toEqual(['1', '2', '3', '4', '5'])
