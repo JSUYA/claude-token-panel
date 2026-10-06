@@ -12,6 +12,10 @@ const prompt = (promptId: string, uuid: string) =>
 const reply = (id: string, model: string, usage: object) =>
   JSON.stringify({ type: 'assistant', message: { id, model, usage } })
 
+// A prompt's uuid, and the engine's name for its row: the last group zeroed.
+const U2 = '77832199-823b-40c6-aeb7-378da5551b9f'
+const U2_ROW = '77832199-823b-40c6-aeb7-000000000000'
+
 const FIRST = {
   input_tokens: 1000,
   output_tokens: 2000,
@@ -29,7 +33,7 @@ const MAIN = [
   prompt('p1', 'u1-tool'),
   // A slash command's caveat is a meta entry the transcript never draws: the row takes the command's uuid.
   JSON.stringify({ type: 'user', promptId: 'p2', uuid: 'u2-meta', isMeta: true, message: {} }),
-  prompt('p2', 'u2'),
+  prompt('p2', U2),
   // The advisor's request inside a response is priced at its own model.
   reply('m2', 'claude-haiku-4-5-20251001', {
     input_tokens: 0,
@@ -66,7 +70,7 @@ test('tally prices each prompt from the transcript and its subagents', () => {
   })
   expect(first?.usd.toFixed(6)).toBe('0.412000')
   // 100*1 + 100*5 at Haiku 4.5, 1000*4 + 1000*20 at Opus 5.5.
-  expect(second).toMatchObject({ id: 'p2', uuid: 'u2', model: 'haiku-4-5', input: 1100, output: 1100, isUnpriced: false })
+  expect(second).toMatchObject({ id: 'p2', uuid: U2, model: 'haiku-4-5', input: 1100, output: 1100, isUnpriced: false })
   expect(second?.usd.toFixed(6)).toBe('0.024600')
 })
 
@@ -138,7 +142,7 @@ test('the pane lists every prompt; pressing a row reveals its prompt and beats i
     props: { title: 'Token panel', isFocused: false, bodyColumns: 61, placement: 'inline' } as never,
   })
 
-  expect((await wide.find({ key: 'row:u2' }))?.props.label).toBe(
+  expect((await wide.find({ key: `row:${U2}` }))?.props.label).toBe(
     '  2   haiku-4-5     1.1k     1.1k        0        0     $0.02',
   )
   expect((await wide.find({ type: 'Box' }))?.props.paddingY).toBe(0)
@@ -155,12 +159,12 @@ test('the pane lists every prompt; pressing a row reveals its prompt and beats i
   // Docked, two empty rows above and below the table.
   expect((await pane.find({ type: 'Box' }))?.props.paddingY).toBe(2)
   expect((await pane.find({ key: 'row:u1' }))?.props.label).toBe('  1 fable-5-1   3.0k   3.0k  1.00M   3.0k   ?0.41')
-  expect((await pane.find({ key: 'row:u2' }))?.props.label).toBe('  2 haiku-4-5   1.1k   1.1k      0      0   $0.02')
+  expect((await pane.find({ key: `row:${U2}` }))?.props.label).toBe('  2 haiku-4-5   1.1k   1.1k      0      0   $0.02')
 
   // An internal call billed 1.00 with no transcript row: the running prompt's.
   billed += 1
   await $.classic.PostToolUse({ transcript_path: PATH } as never)
-  expect((await pane.find({ key: 'row:u2' }))?.props.label).toBe('  2 haiku-4-5   1.1k   1.1k      0      0   $1.02')
+  expect((await pane.find({ key: `row:${U2}` }))?.props.label).toBe('  2 haiku-4-5   1.1k   1.1k      0      0   $1.02')
 
   expect(await pane.find({ type: 'Text', text: /^etc unplaced .*\$0\.50$/ })).toBeDefined()
   // The first prompt used a model the rate table lacks, so the sum is marked `?`.
@@ -170,12 +174,12 @@ test('the pane lists every prompt; pressing a row reveals its prompt and beats i
     plugin: 'token-panel',
     surface: 'terminal',
     component: 'UserMessage',
-    requestId: 'u2',
+    requestId: U2_ROW,
     props: { text: 'second', origin: { kind: 'human' }, isExpanded: false } as never,
   })
 
   expect(await row.find({ type: 'Text', text: 'engine' })).toBeDefined()
-  await pane.press({ key: 'row:u2' })
+  await pane.press({ key: `row:${U2}` })
   expect(toasts).toEqual([expect.stringContaining('ui.scroll')])
   expect((await row.find({ type: 'Box' }))?.props).toMatchObject({ borderColor: 'red', borderDimColor: false })
   await clock.advance(500)

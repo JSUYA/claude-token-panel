@@ -254,7 +254,8 @@ export const register: Register = on => {
   on('ui.render', { component: 'UserMessage' }, async ($, e, next) => {
     const lit = await read($, flash)
 
-    if (lit?.uuid !== e.requestId) {
+    // The engine names a prompt's row by its uuid with the last group zeroed: match the rest.
+    if (lit === null || lit.uuid.slice(0, 23) !== e.requestId.slice(0, 23)) {
       return next(e)
     }
 
