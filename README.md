@@ -34,3 +34,7 @@ claude --plugin-dir .        # run the mod from this folder, reloading on save
 claude plugin validate .
 claude plugin test .
 ```
+
+## License
+
+[MIT](LICENSE)
