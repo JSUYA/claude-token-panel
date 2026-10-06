@@ -15,6 +15,8 @@ const NONE: Usage = { path: null, rows: [], offset: null, mark: 0, marks: {}, re
 const DARK: Flash = null
 const usage = atom({ plugin: 'token-panel', key: 'usage' } as const, NONE)
 const flash = atom({ plugin: 'token-panel', key: 'flash' } as const, DARK)
+// Whether the pane is drawn: while it is not, the band above the prompt holds its button.
+const isShown = atom({ plugin: 'token-panel', key: 'isShown' } as const, false)
 
 const tokens = (n: number): string =>
   n < 1000 ? String(n) : n < 1e6 ? `${(n / 1e3).toFixed(1)}k` : `${(n / 1e6).toFixed(2)}M`
@@ -56,6 +58,19 @@ const refresh = async ($: EngineInterface, seen?: string, isNewPrompt = false): 
   const { cost } = await $.session.usage()
 
   await update($, usage, old => settle(old, path, rows, cost?.usd, isNewPrompt))
+}
+
+// Opens the pane and remembers the choice; one that waits undrawn leaves the button up.
+// ponytail: a waiting pane the terminal later widens to seat keeps the button beside it until pressed
+const show = async ($: EngineInterface): Promise<void> => {
+  await $.store.set('isOff', false)
+  const { isPlaced } = await $.ui.open(OPEN)
+  await update($, isShown, () => isPlaced)
+}
+
+const shut = async ($: EngineInterface): Promise<void> => {
+  await $.store.set('isOff', true)
+  await update($, isShown, () => false)
 }
 
 // The running beat's timer: a module's own, so a reload drops it with the module.
@@ -106,7 +121,7 @@ export const register: Register = on => {
     }
 
     if ((await $.store.get('isOff')) !== true) {
-      void $.ui.open(OPEN)
+      void show($)
     }
 
     return next(e)
@@ -114,17 +129,25 @@ export const register: Register = on => {
 
   on('command.run', { command: PANE }, async $ => {
     const isOpen = (await $.ui.panes()).some(pane => pane.id === PANE && pane.isPlaced)
-    await $.store.set('isOff', isOpen)
 
     if (isOpen) {
       await $.ui.close({ id: PANE })
+      await shut($)
 
       return { text: 'Token panel off.' }
     }
 
-    await $.ui.open(OPEN)
+    await show($)
 
     return { text: 'Token panel on.' }
+  })
+
+  // The pane's own close mark: the button takes its place.
+  on('ui.close', { id: PANE }, async ($, e, next) => {
+    const closed = await next(e)
+    await shut($)
+
+    return closed
   })
 
   on('classic.SessionStart', async ($, e, next) => {
@@ -205,6 +228,25 @@ export const register: Register = on => {
             rows.some(row => row.isUnpriced),
           ).join(gap)}
         </Text>
+      </Box>
+    )
+  })
+
+  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    if (e.props.hasSurvey || (await read($, isShown))) {
+      return next(e)
+    }
+
+    const { Box, Button } = $.ui.resolve(e)
+
+    return (
+      <Box width={e.props.bodyColumns} justifyContent="flex-end">
+        <Button
+          key="open"
+          label="TokenPanel"
+          hover={{ scope: 'open', backgroundColor: 'suggestion', color: 'inverseText' }}
+          onPress={() => show($)}
+        />
       </Box>
     )
   })

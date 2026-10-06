@@ -207,3 +207,36 @@ test('/token-panel closes an open pane, opens a closed one, and remembers the ch
   expect(stored.get('isOff')).toBe(false)
   expect(calls).toEqual(['close', 'open'])
 })
+
+test('the band above the prompt holds a button while the pane is shut; it opens the pane, closing brings it back', async ($, on) => {
+  const stored = new Map<string, unknown>()
+
+  on('store.get', (_, e) => ({ value: stored.get(e.key) }))
+  on('store.set', (_, e) => (stored.set(e.key, e.value), { value: undefined }))
+  on('ui.panes', () => ({
+    value: [{ id: 'token-panel', title: 'Token panel', isShown: true, isFocused: false, isPlaced: true }],
+  }))
+  on('ui.close', () => ({ value: undefined }))
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Text } = $.ui.resolve(e)
+
+    return h(Text, null, 'engine') as never
+  })
+
+  const band = await $.ui.mount({
+    plugin: 'token-panel',
+    surface: 'terminal',
+    component: 'AbovePrompt',
+    requestId: 'band',
+    props: { hasSurvey: false, isWorking: false, maxRows: 5, bodyColumns: 80 } as never,
+  })
+
+  expect((await band.find({ key: 'open' }))?.props.label).toBe('TokenPanel')
+  await band.press({ key: 'open' })
+  expect(stored.get('isOff')).toBe(false)
+  expect(await band.find({ key: 'open' })).toBeUndefined()
+  await $.command.run({ command: 'token-panel', args: '' } as never)
+  expect(stored.get('isOff')).toBe(true)
+  expect(await band.find({ key: 'open' })).toBeDefined()
+})
