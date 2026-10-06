@@ -83,7 +83,13 @@ export const tally = (main: string, agents: readonly string[] = []): Row[] => {
         continue
       }
 
-      if (entry?.type === 'user' && typeof entry.promptId === 'string' && entry.promptId !== row?.id) {
+      // A meta entry (a slash command's caveat) is never drawn: the prompt's row takes the next one's uuid.
+      if (
+        entry?.type === 'user' &&
+        entry.isMeta !== true &&
+        typeof entry.promptId === 'string' &&
+        entry.promptId !== row?.id
+      ) {
         row = rows.find(known => known.id === entry.promptId)
 
         if (row === undefined && text === main) {

@@ -27,6 +27,8 @@ const MAIN = [
   reply('m1', 'claude-fable-5-1', FIRST),
   // A tool result carries its prompt's id: no new row.
   prompt('p1', 'u1-tool'),
+  // A slash command's caveat is a meta entry the transcript never draws: the row takes the command's uuid.
+  JSON.stringify({ type: 'user', promptId: 'p2', uuid: 'u2-meta', isMeta: true, message: {} }),
   prompt('p2', 'u2'),
   // The advisor's request inside a response is priced at its own model.
   reply('m2', 'claude-haiku-4-5-20251001', {
