@@ -10,11 +10,23 @@ export type Row = {
   cacheRead: number
   cacheWrite: number
   usd: number
+  // What the engine billed during the prompt beyond its transcript: internal
+  // calls (a web search's own request, titles, summaries) no transcript row holds.
+  other: number
   // True when a model no rate is known for answered: `usd` leaves its tokens out.
   isUnpriced: boolean
 }
 
-export type Usage = { path: string | null; rows: Row[] }
+export type Usage = {
+  path: string | null
+  rows: Row[]
+  // The engine's cost total less the transcripts', as first seen: what the
+  // difference grows by afterwards is the internal calls' cost. Null until seen.
+  offset: number | null
+  // That growth when the latest prompt was submitted, and when each prompt began.
+  mark: number
+  marks: Record<string, number>
+}
 
 // The prompt row whose border beats after its pane row was pressed.
 export type Flash = { uuid: string; isOn: boolean } | null

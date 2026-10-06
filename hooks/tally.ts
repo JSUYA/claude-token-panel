@@ -1,4 +1,4 @@
-import type { Row } from '../types'
+import type { Row, Usage } from '../types'
 
 // USD per million tokens at standard API rates, which an Enterprise plan bills
 // usage at: [model id part, input, output, cache read]. The first match wins.
@@ -96,6 +96,7 @@ export const tally = (main: string, agents: readonly string[] = []): Row[] => {
             cacheRead: 0,
             cacheWrite: 0,
             usd: 0,
+            other: 0,
             isUnpriced: false,
           }
           rows.push(row)
@@ -123,4 +124,41 @@ export const tally = (main: string, agents: readonly string[] = []): Row[] => {
   }
 
   return rows
+}
+
+/**
+ * The pane's state after a count: `rows` with each prompt's share of what the
+ * engine billed beyond the transcripts. `engine` is the engine's cost total,
+ * and `isNewPrompt` says a prompt was just submitted: growth up to here is
+ * the earlier prompt's, growth from here the new one's.
+ */
+export const settle = (
+  old: Usage,
+  path: string,
+  rows: Row[],
+  engine: number | undefined,
+  isNewPrompt: boolean,
+): Usage => {
+  if (engine === undefined) {
+    return { ...old, path, rows }
+  }
+
+  const gap = engine - rows.reduce((sum, row) => sum + row.usd, 0)
+  const offset = old.offset ?? gap
+  const grown = gap - offset
+  const mark = isNewPrompt ? grown : old.mark
+  const marks = { ...old.marks }
+
+  for (const row of rows) {
+    marks[row.id] ??= mark
+  }
+
+  rows.forEach((row, i) => {
+    const next = rows[i + 1]
+    const end = next === undefined ? grown : (marks[next.id] ?? grown)
+    // A count taken between the engine's bill and the transcript's row can dip below zero.
+    row.other = Math.max(0, end - (marks[row.id] ?? end))
+  })
+
+  return { path, rows, offset, mark, marks }
 }

@@ -1,6 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { tally } from '../hooks/tally'
+import { settle, tally } from '../hooks/tally'
+import type { Row, Usage } from '../types'
 
 const PATH = '/home/me/.claude/projects/-work/s1.jsonl'
 const AGENT = '/home/me/.claude/projects/-work/s1/subagents/agent-a1.jsonl'
@@ -67,9 +68,45 @@ test('tally prices each prompt from the transcript and its subagents', () => {
   expect(second?.usd.toFixed(6)).toBe('0.024600')
 })
 
+test('settle sets what the engine billed beyond the transcripts against the prompt it fell in', () => {
+  const row = (id: string, usd: number): Row => ({
+    id,
+    uuid: id,
+    model: '',
+    input: 0,
+    output: 0,
+    cacheRead: 0,
+    cacheWrite: 0,
+    usd,
+    other: 0,
+    isUnpriced: false,
+  })
+  const others = (state: Usage) => state.rows.map(one => one.other.toFixed(2))
+  let state: Usage = { path: null, rows: [], offset: null, mark: 0, marks: {} }
+
+  // First seen mid-session: the 4.00 billed before is nobody's.
+  state = settle(state, 'p', [row('p1', 1)], 5, false)
+  expect(others(state)).toEqual(['0.00'])
+  // 0.50 more billed, 0.20 of it in the transcript: 0.30 of internal calls.
+  state = settle(state, 'p', [row('p1', 1.2)], 5.5, false)
+  expect(others(state)).toEqual(['0.30'])
+  // What is billed up to the next prompt's submission still belongs to the first.
+  state = settle(state, 'p', [row('p1', 1.2)], 5.6, true)
+  state = settle(state, 'p', [row('p1', 1.2), row('p2', 2)], 7.9, false)
+  expect(others(state)).toEqual(['0.40', '0.30'])
+  // With no cost ledger nothing is added.
+  expect(others(settle(state, 'p', [row('p1', 1.2)], undefined, false))).toEqual(['0.00'])
+})
+
 test('the pane lists every prompt; pressing a row reveals its prompt and beats its border for 3s', async ($, on) => {
   const toasts: string[] = []
   const clock = mock.clock(on)
+  // The engine's total: 0.50 billed before the mod first counted.
+  let billed = 0.412 + 0.0246 + 0.5
+
+  on('session.usage', () => ({
+    value: { startedAt: 0, context: { window: 1_000_000 }, rateLimits: [], cost: { usd: billed } },
+  }))
 
   on('fs.exists', (_, e) => ({ value: e.path === PATH.replace('.jsonl', '/subagents') }))
   on('fs.list', () => ({
@@ -111,6 +148,11 @@ test('the pane lists every prompt; pressing a row reveals its prompt and beats i
 
   expect((await pane.find({ key: 'row:u1' }))?.props.label).toBe('  1 fable-5-1   3.0k   3.0k  1.00M   3.0k   ?0.41')
   expect((await pane.find({ key: 'row:u2' }))?.props.label).toBe('  2 haiku-4-5   1.1k   1.1k      0      0   $0.02')
+
+  // An internal call billed 1.00 with no transcript row: the running prompt's.
+  billed += 1
+  await $.classic.PostToolUse({ transcript_path: PATH } as never)
+  expect((await pane.find({ key: 'row:u2' }))?.props.label).toBe('  2 haiku-4-5   1.1k   1.1k      0      0   $1.02')
 
   const row = await $.ui.mount({
     plugin: 'token-panel',

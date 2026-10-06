@@ -28,7 +28,9 @@ Answer `y` to add the marketplace, then pick a scope (user scope loads it in eve
 ## What is counted
 
 - The numbers come from the session's transcript file, so prompts sent before the mod loaded are listed too.
-- A subagent's tokens count toward the prompt that spawned it.
+- A subagent's tokens count toward the prompt that spawned it, priced at the subagent's own model.
+- An advisor call is counted as its own request, priced at the advisor's model.
+- Internal calls that leave no transcript row (a web search's own request, title and summary generation) are added to `cost` only: the engine's cost total is compared with the transcripts', and what it billed beyond them goes to the prompt it fell in. Their tokens are not known, so the token columns leave them out. This starts when the mod first loads in a session.
 - `model` is the main loop's model for the prompt.
 - The table refreshes after each tool call and when a turn ends.
 
@@ -38,7 +40,7 @@ Cost is tokens times the standard API rates, which is what a usage-based Enterpr
 
 - The rate table lives in `hooks/tally.ts` and has to be updated by hand when [prices](https://platform.claude.com/docs/en/about-claude/pricing) change.
 - Not included: the 1.1x US-only inference multiplier, fast mode rates, and the per-request web search fee.
-- A prompt answered by a model missing from the table shows `?` instead of `$`, and that model's tokens are left out of its cost.
+- A prompt answered by a model missing from the table shows `?` instead of `$`: the table could not price that model's tokens itself.
 
 ## Develop
 

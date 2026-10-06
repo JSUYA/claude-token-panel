@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, Timer } from 'claude-code'
 
 import type { Flash, Row, Usage } from '../types'
-import { tally } from './tally'
+import { settle, tally } from './tally'
 
 const PANE = 'token-panel'
 const TITLE = 'Claude Token Panel'
@@ -11,13 +11,17 @@ const OPEN = { id: PANE, title: TITLE, columns: 49 }
 const WIDTH = 49
 const HEAD = ['  #', ' model    ', '     in', '    out', ' cacheR', ' cacheW', '    cost']
 const COUNTS = ['input', 'output', 'cacheRead', 'cacheWrite'] as const
-const NONE: Usage = { path: null, rows: [] }
+const NONE: Usage = { path: null, rows: [], offset: null, mark: 0, marks: {} }
 const DARK: Flash = null
 const usage = atom({ plugin: 'token-panel', key: 'usage' } as const, NONE)
 const flash = atom({ plugin: 'token-panel', key: 'flash' } as const, DARK)
 
 const tokens = (n: number): string =>
   n < 1000 ? String(n) : n < 1e6 ? `${(n / 1e3).toFixed(1)}k` : `${(n / 1e6).toFixed(2)}M`
+
+// A prompt's cost is its transcript's plus the internal calls the engine billed in it.
+const cell = (row: Row, key: (typeof COUNTS)[number] | 'usd'): number =>
+  key === 'usd' ? row.usd + row.other : row[key]
 
 const line = (
   label: string,
@@ -31,9 +35,10 @@ const line = (
   `${isUnpriced ? '?' : '$'}${of('usd').toFixed(2)}`.padStart(8),
 ]
 
-// Counts the session again from its transcript, and its subagents' beside it.
+// Counts the session again from its transcript, and its subagents' beside it,
+// then sets what the engine billed beyond them against the prompt it fell in.
 // ponytail: every file is read whole each time, tail them if a session's transcripts grow past tens of MB
-const refresh = async ($: EngineInterface, seen?: string): Promise<void> => {
+const refresh = async ($: EngineInterface, seen?: string, isNewPrompt = false): Promise<void> => {
   const path = seen ?? (await read($, usage)).path
 
   if (path === null) {
@@ -48,8 +53,9 @@ const refresh = async ($: EngineInterface, seen?: string): Promise<void> => {
       .map(entry => $.fs.read(`${folder}/${entry.name}`)),
   )
   const rows = tally(await $.fs.read(path), agents)
+  const { cost } = await $.session.usage()
 
-  await update($, usage, () => ({ path, rows }))
+  await update($, usage, old => settle(old, path, rows, cost?.usd, isNewPrompt))
 }
 
 // The running beat's timer: a module's own, so a reload drops it with the module.
@@ -128,7 +134,7 @@ export const register: Register = on => {
   })
 
   on('classic.UserPromptSubmit', async ($, e, next) => {
-    await refresh($, e.transcript_path)
+    await refresh($, e.transcript_path, true)
 
     return next(e)
   })
@@ -170,7 +176,7 @@ export const register: Register = on => {
             <Button
               key={`row:${row.uuid}`}
               plain
-              label={line(String(i + 1), row.model, key => row[key], row.isUnpriced).join(gap)}
+              label={line(String(i + 1), row.model, key => cell(row, key), row.isUnpriced).join(gap)}
               onPress={() => reveal($, row.uuid)}
             />
           ))
@@ -179,7 +185,7 @@ export const register: Register = on => {
           {line(
             'sum',
             '',
-            key => rows.reduce((sum, row) => sum + row[key], 0),
+            key => rows.reduce((sum, row) => sum + cell(row, key), 0),
             rows.some(row => row.isUnpriced),
           ).join(gap)}
         </Text>
