@@ -5,7 +5,8 @@ import type { Flash, Row, Usage } from '../types'
 import { tally } from './tally'
 
 const PANE = 'token-cost'
-const OPEN = { id: PANE, title: 'Token cost', columns: 49 }
+const TITLE = 'Claude Token Panel'
+const OPEN = { id: PANE, title: TITLE, columns: 49 }
 // Column widths in cells: 3, 10 for the model, 7 per token count, 8 for the cost.
 const WIDTH = 49
 const HEAD = ['  #', ' model    ', '     in', '    out', ' cacheR', ' cacheW', '    cost']
@@ -150,13 +151,16 @@ export const register: Register = on => {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const { Box, Button, Text } = $.ui.resolve(e)
     const { rows } = await read($, usage)
-    const room = Math.max(1, (e.viewport?.rows ?? 24) - 6)
+    const room = Math.max(1, (e.viewport?.rows ?? 24) - 7)
     // Above the prompt the table spreads over the pane's width; docked it stays compact.
     const spare = e.props.placement === 'inline' ? e.props.bodyColumns - WIDTH : 0
     const gap = ' '.repeat(Math.max(0, Math.floor(spare / (HEAD.length - 1))))
 
     return (
       <Box flexDirection="column">
+        <Text bold wrap="truncate-end">
+          {TITLE}
+        </Text>
         <Text bold wrap="truncate-end">
           {HEAD.join(gap)}
         </Text>
