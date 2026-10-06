@@ -191,6 +191,56 @@ test('the pane lists every prompt; pressing a row reveals its prompt and beats i
   expect(await row.find({ type: 'Text', text: 'engine' })).toBeDefined()
 })
 
+test('above the prompt the list shows the five newest prompts and scrolls under the head and the sum', async ($, on) => {
+  const many = ['1', '2', '3', '4', '5', '6', '7'].map(n => prompt(`p${n}`, `u${n}`)).join('\n')
+
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 1_000_000 }, rateLimits: [] } }))
+  on('fs.exists', () => ({ value: false }))
+  on('fs.read', () => ({ value: many }))
+  on('classic.PostToolUse', () => ({}))
+  await $.classic.PostToolUse({ transcript_path: PATH } as never)
+
+  const pane = await $.ui.mount({
+    plugin: 'token-panel',
+    surface: 'terminal',
+    component: 'Pane',
+    requestId: 'token-panel',
+    props: { title: 'Token panel', isFocused: false, bodyColumns: 49, placement: 'inline' } as never,
+  })
+  const listed = async () => {
+    const shown: string[] = []
+
+    for (const n of ['1', '2', '3', '4', '5', '6', '7']) {
+      if (await pane.find({ key: `row:u${n}` })) {
+        shown.push(n)
+      }
+    }
+
+    return shown
+  }
+  // The person's wheel over the pane: `by` rows, negative toward the top.
+  const wheel = (by: number) =>
+    $.ui.scroll({
+      component: 'Pane',
+      requestId: 'token-panel',
+      offset: 0,
+      by,
+      bodyRows: 9,
+      contentRows: 9,
+      origin: { kind: 'person' },
+    } as never)
+
+  expect(await listed()).toEqual(['3', '4', '5', '6', '7'])
+  await wheel(-1)
+  expect(await listed()).toEqual(['2', '3', '4', '5', '6'])
+  // Past the oldest it stops.
+  await wheel(-5)
+  expect(await listed()).toEqual(['1', '2', '3', '4', '5'])
+  await wheel(9)
+  expect(await listed()).toEqual(['3', '4', '5', '6', '7'])
+  expect(await pane.find({ type: 'Text', text: /^sum / })).toBeDefined()
+})
+
 test('/token-panel closes an open pane, opens a closed one, and remembers the choice', async ($, on) => {
   const calls: string[] = []
   const stored = new Map<string, unknown>()

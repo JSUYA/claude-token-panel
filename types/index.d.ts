@@ -36,6 +36,6 @@ export type Flash = { uuid: string; isOn: boolean } | null
 
 declare module 'claude-code' {
   interface PluginState {
-    'token-panel': { usage: Usage; flash: Flash; isShown: boolean }
+    'token-panel': { usage: Usage; flash: Flash; back: number; isShown: boolean }
   }
 }

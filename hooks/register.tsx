@@ -6,7 +6,9 @@ import { settle, tally } from './tally'
 
 const PANE = 'token-panel'
 const TITLE = 'Claude Token Panel'
-const OPEN = { id: PANE, title: TITLE, columns: 49 }
+// Above the prompt the table lists five prompts: the frame asks for them, the title, the head, `etc` and `sum`.
+const LIST = 5
+const OPEN = { id: PANE, title: TITLE, columns: 49, rows: LIST + 4 }
 // Column widths in cells: 3, 10 for the model, 7 per token count, 8 for the cost.
 const WIDTH = 49
 const HEAD = ['  #', ' model    ', '     in', '    out', ' cacheR', ' cacheW', '    cost']
@@ -15,6 +17,8 @@ const NONE: Usage = { path: null, rows: [], offset: null, mark: 0, marks: {}, re
 const DARK: Flash = null
 const usage = atom({ plugin: 'token-panel', key: 'usage' } as const, NONE)
 const flash = atom({ plugin: 'token-panel', key: 'flash' } as const, DARK)
+// How many prompts the list is scrolled up from the newest: 0 keeps the newest in view.
+const back = atom({ plugin: 'token-panel', key: 'back' } as const, 0)
 // Whether the pane is drawn: while it is not, the band above the prompt holds its button.
 const isShown = atom({ plugin: 'token-panel', key: 'isShown' } as const, false)
 
@@ -75,6 +79,8 @@ const shut = async ($: EngineInterface): Promise<void> => {
 
 // The running beat's timer: a module's own, so a reload drops it with the module.
 let beat: Timer | undefined
+// The prompts the list showed when last drawn: how far it can scroll.
+let shown = LIST
 
 // Brings the prompt's row into view and beats its border for three seconds.
 const reveal = async ($: EngineInterface, uuid: string): Promise<void> => {
@@ -191,7 +197,10 @@ export const register: Register = on => {
     const { rows, rest = 0 } = await read($, usage)
     // Docked, the table keeps two empty rows above and below it.
     const inset = e.props.placement === 'dock' ? 2 : 0
-    const room = Math.max(1, (e.viewport?.rows ?? 24) - 8 - 2 * inset)
+    const room =
+      e.props.placement === 'inline' ? LIST : Math.max(1, (e.viewport?.rows ?? 24) - 8 - 2 * inset)
+    const end = rows.length - Math.min(await read($, back), Math.max(0, rows.length - room))
+    shown = room
     // Above the prompt the table spreads over the pane's width; docked it stays compact.
     const spare = e.props.placement === 'inline' ? e.props.bodyColumns - WIDTH : 0
     const gap = ' '.repeat(Math.max(0, Math.floor(spare / (HEAD.length - 1))))
@@ -214,7 +223,7 @@ export const register: Register = on => {
               onPress={() => reveal($, row.uuid)}
             />
           ))
-          .slice(-room)}
+          .slice(Math.max(0, end - room), end)}
         {rest >= 0.005 && (
           <Text dimColor wrap="truncate-end">
             {line('etc', 'unplaced', key => (key === 'usd' ? rest : 0), false).join(gap)}
@@ -230,6 +239,14 @@ export const register: Register = on => {
         </Text>
       </Box>
     )
+  })
+
+  // The list scrolls under the title, the head and the sum, which stay put.
+  on('ui.scroll', { requestId: PANE }, async ($, e) => {
+    const { rows } = await read($, usage)
+    await update($, back, old => Math.min(Math.max(0, rows.length - shown), Math.max(0, old - e.by)))
+
+    return {}
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
