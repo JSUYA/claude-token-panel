@@ -139,6 +139,7 @@ test('the pane lists every prompt; pressing a row reveals its prompt and beats i
   expect((await wide.find({ key: 'row:u2' }))?.props.label).toBe(
     '  2   haiku-4-5     1.1k     1.1k        0        0     $0.02',
   )
+  expect((await wide.find({ type: 'Box' }))?.props.paddingY).toBe(0)
   await wide.unmount()
 
   const pane = await $.ui.mount({
@@ -149,6 +150,8 @@ test('the pane lists every prompt; pressing a row reveals its prompt and beats i
     props: { title: 'Token panel', isFocused: false, bodyColumns: 40, placement: 'dock' } as never,
   })
 
+  // Docked, two empty rows above and below the table.
+  expect((await pane.find({ type: 'Box' }))?.props.paddingY).toBe(2)
   expect((await pane.find({ key: 'row:u1' }))?.props.label).toBe('  1 fable-5-1   3.0k   3.0k  1.00M   3.0k   ?0.41')
   expect((await pane.find({ key: 'row:u2' }))?.props.label).toBe('  2 haiku-4-5   1.1k   1.1k      0      0   $0.02')
 

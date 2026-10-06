@@ -166,13 +166,15 @@ export const register: Register = on => {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const { Box, Button, Text } = $.ui.resolve(e)
     const { rows, rest = 0 } = await read($, usage)
-    const room = Math.max(1, (e.viewport?.rows ?? 24) - 8)
+    // Docked, the table keeps two empty rows above and below it.
+    const inset = e.props.placement === 'dock' ? 2 : 0
+    const room = Math.max(1, (e.viewport?.rows ?? 24) - 8 - 2 * inset)
     // Above the prompt the table spreads over the pane's width; docked it stays compact.
     const spare = e.props.placement === 'inline' ? e.props.bodyColumns - WIDTH : 0
     const gap = ' '.repeat(Math.max(0, Math.floor(spare / (HEAD.length - 1))))
 
     return (
-      <Box flexDirection="column">
+      <Box flexDirection="column" paddingY={inset}>
         <Text bold wrap="truncate-end">
           {TITLE}
         </Text>
