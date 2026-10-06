@@ -4,13 +4,6 @@ A Claude Code mod that shows, for every prompt of the session, how many tokens i
 
 ![The pane docked beside the transcript](docs/screenshot.png)
 
-```
-  # model         in    out cacheR cacheW    cost
-  1 fable-5-1     12   1.7k 241.8k  65.1k   $1.45
-  2 fable-5-1  85.7k   8.3k 601.2k  21.6k   $1.84
-sum            85.7k  10.0k 843.0k  86.7k   $3.29
-```
-
 ## Install
 
 Requires Claude Code 2.1.287 or newer. At the prompt of a terminal session:
