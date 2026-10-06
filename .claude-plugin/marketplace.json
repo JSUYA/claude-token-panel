@@ -1,5 +1,5 @@
 {
-  "name": "claude-token-panel-mod",
+  "name": "claude-token-panel",
   "owner": { "name": "JunsuChoi" },
   "plugins": [{ "name": "token-panel", "source": "./" }]
 }

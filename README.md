@@ -1,4 +1,4 @@
-# claude-token-panel-mod
+# claude-token-panel
 
 A Claude Code mod that shows, for every prompt of the session, how many tokens it used and what it cost.
 
@@ -9,7 +9,7 @@ A Claude Code mod that shows, for every prompt of the session, how many tokens i
 Requires Claude Code 2.1.287 or newer. At the prompt of a terminal session:
 
 ```
-/plugin install token-panel --marketplace JSUYA/claude-token-panel-mod
+/plugin install token-panel --marketplace JSUYA/claude-token-panel
 ```
 
 Answer `y` to add the marketplace, then pick a scope (user scope loads it in every session).
