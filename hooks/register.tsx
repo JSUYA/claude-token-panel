@@ -41,11 +41,19 @@ const line = (
   `${isUnpriced ? '?' : '$'}${of('usd').toFixed(2)}`.padStart(8),
 ]
 
+// Where the CLI keeps the transcript, once it is written: for when no classic
+// event named it (another plugin may bypass this one's classic hooks).
+const locate = async ($: EngineInterface): Promise<string | null> => {
+  const path = `${await $.env.get('HOME')}/.claude/projects/${(await $.session.root()).replace(/[^a-zA-Z0-9]/g, '-')}/${await $.session.id()}.jsonl`
+
+  return (await $.fs.exists(path)) ? path : null
+}
+
 // Counts the session again from its transcript, and its subagents' beside it,
 // then sets what the engine billed beyond them against the prompt it fell in.
 // ponytail: every file is read whole each time, tail them if a session's transcripts grow past tens of MB
 const refresh = async ($: EngineInterface, seen?: string, isNewPrompt = false): Promise<void> => {
-  const path = seen ?? (await read($, usage)).path
+  const path = seen ?? (await read($, usage)).path ?? (await locate($))
 
   if (path === null) {
     return
@@ -116,15 +124,7 @@ export const register: Register = on => {
     // A reload drops the timer: no beat is left running.
     await update($, flash, () => null)
 
-    const known = (await read($, usage)).path
-    // Until a classic event names the transcript, look where the CLI keeps it.
-    const guess = `${await $.env.get('HOME')}/.claude/projects/${(await $.session.root()).replace(/[^a-zA-Z0-9]/g, '-')}/${await $.session.id()}.jsonl`
-
-    if (known !== null) {
-      await refresh($)
-    } else if (await $.fs.exists(guess)) {
-      await refresh($, guess)
-    }
+    await refresh($)
 
     if ((await $.store.get('isOff')) !== true) {
       void show($)

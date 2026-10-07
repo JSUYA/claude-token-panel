@@ -299,3 +299,34 @@ test('the band above the prompt holds a button while the pane is shut; it opens 
   expect(stored.get('isOff')).toBe(true)
   expect(await band.find({ key: 'open' })).toBeDefined()
 })
+
+test('with no classic event, a turn finds the transcript where the CLI keeps it once it is written', async ($, on) => {
+  let isWritten = false
+
+  on('env.get', () => ({ value: '/home/me' }))
+  on('session.root', () => ({ value: '/work' }))
+  on('session.id', () => ({ value: 's1' }))
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 1_000_000 }, rateLimits: [] } }))
+  on('fs.exists', (_, e) => ({ value: isWritten && e.path === PATH }))
+  on('fs.read', () => ({ value: MAIN }))
+  on('command.register', () => ({ value: undefined }))
+  on('store.get', () => ({ value: true }))
+  on('session.start', (_, e) => e as never)
+  on('turn.complete', () => ({ text: '' }) as never)
+
+  const pane = await $.ui.mount({
+    plugin: 'token-panel',
+    surface: 'terminal',
+    component: 'Pane',
+    requestId: 'token-panel',
+    props: { title: 'Token panel', isFocused: false, bodyColumns: 40, placement: 'dock' } as never,
+  })
+
+  // The session starts before its transcript is written.
+  await $.session.start({ cwd: '/work' } as never)
+  expect(await pane.find({ type: 'Text', text: 'No prompts yet.' })).toBeDefined()
+
+  isWritten = true
+  await $.turn.complete({ answer: '' } as never)
+  expect(await pane.find({ key: 'row:u1' })).toBeDefined()
+})
