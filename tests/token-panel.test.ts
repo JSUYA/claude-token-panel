@@ -270,13 +270,10 @@ test('a prompt submitted before its transcript is written is listed when the tur
   expect(await pane.find({ key: 'row:u1' })).toBeDefined()
 })
 
-test('/token-panel closes an open pane, opens a closed one, and remembers the choice', async ($, on) => {
+test('/token-panel closes an open pane and opens a closed one', async ($, on) => {
   const calls: string[] = []
-  const stored = new Map<string, unknown>()
   let isPlaced = true
 
-  on('store.get', (_, e) => ({ value: stored.get(e.key) }))
-  on('store.set', (_, e) => (stored.set(e.key, e.value), { value: undefined }))
   on('ui.panes', () => ({
     value: [{ id: 'token-panel', title: 'Token panel', isShown: true, isFocused: false, isPlaced }],
   }))
@@ -286,18 +283,12 @@ test('/token-panel closes an open pane, opens a closed one, and remembers the ch
   const run = () => $.command.run({ command: 'token-panel', args: '' } as never)
 
   expect((await run()).text).toBe('Token panel off.')
-  expect(stored.get('isOff')).toBe(true)
   isPlaced = false
   expect((await run()).text).toBe('Token panel on.')
-  expect(stored.get('isOff')).toBe(false)
   expect(calls).toEqual(['close', 'open'])
 })
 
 test('the band above the prompt holds a button while the pane is shut; it opens the pane, closing brings it back', async ($, on) => {
-  const stored = new Map<string, unknown>()
-
-  on('store.get', (_, e) => ({ value: stored.get(e.key) }))
-  on('store.set', (_, e) => (stored.set(e.key, e.value), { value: undefined }))
   on('ui.panes', () => ({
     value: [{ id: 'token-panel', title: 'Token panel', isShown: true, isFocused: false, isPlaced: true }],
   }))
@@ -319,10 +310,8 @@ test('the band above the prompt holds a button while the pane is shut; it opens 
 
   expect((await band.find({ key: 'open' }))?.props.label).toBe('TokenPanel')
   await band.press({ key: 'open' })
-  expect(stored.get('isOff')).toBe(false)
   expect(await band.find({ key: 'open' })).toBeUndefined()
   await $.command.run({ command: 'token-panel', args: '' } as never)
-  expect(stored.get('isOff')).toBe(true)
   expect(await band.find({ key: 'open' })).toBeDefined()
 })
 
@@ -336,7 +325,6 @@ test('with no classic event, a turn finds the transcript where the CLI keeps it 
   on('fs.exists', (_, e) => ({ value: isWritten && e.path === PATH }))
   on('fs.read', () => ({ value: MAIN }))
   on('command.register', () => ({ value: undefined }))
-  on('store.get', () => ({ value: true }))
   on('session.start', (_, e) => e as never)
   on('turn.complete', () => ({ text: '' }) as never)
 

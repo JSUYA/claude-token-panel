@@ -14,7 +14,7 @@ Requires Claude Code 2.1.287 or newer.
 
 ## Use
 
-`/token-panel` shows or hides the pane.
+The pane starts hidden. The `TokenPanel` button above the prompt or `/token-panel` opens it, and `/token-panel` hides it again.
 
 ## What is counted
 

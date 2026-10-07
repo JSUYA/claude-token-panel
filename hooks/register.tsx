@@ -73,18 +73,14 @@ const refresh = async ($: EngineInterface, seen?: string, isNewPrompt = false): 
   await update($, usage, old => settle(old, path, rows, cost?.usd, isNewPrompt))
 }
 
-// Opens the pane and remembers the choice; one that waits undrawn leaves the button up.
+// Opens the pane; one that waits undrawn leaves the button up.
 // ponytail: a waiting pane the terminal later widens to seat keeps the button beside it until pressed
 const show = async ($: EngineInterface): Promise<void> => {
-  await $.store.set('isOff', false)
   const { isPlaced } = await $.ui.open(OPEN)
   await update($, isShown, () => isPlaced)
 }
 
-const shut = async ($: EngineInterface): Promise<void> => {
-  await $.store.set('isOff', true)
-  await update($, isShown, () => false)
-}
+const shut = ($: EngineInterface): Promise<void> => update($, isShown, () => false)
 
 // The running beat's timer: a module's own, so a reload drops it with the module.
 let beat: Timer | undefined
@@ -125,11 +121,8 @@ export const register: Register = on => {
     // A reload drops the timer: no beat is left running.
     await update($, flash, () => null)
 
+    // Every session starts with the pane shut: the button above the prompt or /token-panel opens it.
     await refresh($)
-
-    if ((await $.store.get('isOff')) !== true) {
-      void show($)
-    }
 
     return next(e)
   })
