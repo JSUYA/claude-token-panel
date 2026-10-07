@@ -84,10 +84,17 @@ export const tally = (main: string, agents: readonly string[] = []): Row[] => {
         continue
       }
 
+      // A client-local command (/reload-plugins, /clear, …) echoes itself in a user entry but
+      // runs no model turn; it is not a prompt. A model-invoking command keeps its expanded
+      // prompt in a separate entry, so skipping the echo still leaves its row.
+      const content: unknown = entry?.message?.content
+      const isCommand = typeof content === 'string' && /^\s*<(command-|local-command-)/.test(content)
+
       // A meta entry (a slash command's caveat) is never drawn: the prompt's row takes the next one's uuid.
       if (
         entry?.type === 'user' &&
         entry.isMeta !== true &&
+        !isCommand &&
         typeof entry.promptId === 'string' &&
         entry.promptId !== row?.id
       ) {

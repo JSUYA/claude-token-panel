@@ -43,6 +43,13 @@ const MAIN = [
       { type: 'advisor_message', model: 'claude-opus-5-5', input_tokens: 1000, output_tokens: 1000 },
     ],
   }),
+  // A client-local command (/reload-plugins) between turns writes a user entry but runs no model turn: no row.
+  JSON.stringify({
+    type: 'user',
+    promptId: 'p-local',
+    uuid: 'u-local',
+    message: { role: 'user', content: '<command-name>/reload-plugins</command-name>' },
+  }),
   // A line still being written is skipped.
   '{"type":"assistant","message":{"id":"m3","mod',
 ].join('\n')
@@ -72,6 +79,21 @@ test('tally prices each prompt from the transcript and its subagents', () => {
   // 100*1 + 100*5 at Haiku 4.5, 1000*4 + 1000*20 at Opus 5.5.
   expect(second).toMatchObject({ id: 'p2', uuid: U2, model: 'haiku-4-5', input: 1100, output: 1100, isUnpriced: false })
   expect(second?.usd.toFixed(6)).toBe('0.024600')
+})
+
+test('a client-local command leaves no row', () => {
+  const local = JSON.stringify({
+    type: 'user',
+    promptId: 'p-local',
+    uuid: 'u-local',
+    message: { role: 'user', content: '<command-name>/reload-plugins</command-name>' },
+  })
+
+  // On its own it lists nothing; after a real turn only the real prompt remains.
+  expect(tally(local)).toEqual([])
+  expect(
+    tally([prompt('p1', 'u1'), reply('m1', 'claude-opus-5-5', FIRST), local].join('\n')).map(row => row.id),
+  ).toEqual(['p1'])
 })
 
 test('settle sets what the engine billed beyond the transcripts against the prompt it fell in', () => {
