@@ -117,7 +117,7 @@ test('the pane lists every prompt; pressing a row reveals its prompt and beats i
     value: { startedAt: 0, context: { window: 1_000_000 }, rateLimits: [], cost: { usd: billed } },
   }))
 
-  on('fs.exists', (_, e) => ({ value: e.path === PATH.replace('.jsonl', '/subagents') }))
+  on('fs.exists', (_, e) => ({ value: e.path === PATH || e.path === PATH.replace('.jsonl', '/subagents') }))
   on('fs.list', () => ({
     value: [{ name: 'agent-a1.jsonl', kind: 'file', size: 1, mtimeMs: 0, isLink: false }],
   }))
@@ -195,7 +195,7 @@ test('above the prompt the list shows the five newest prompts and scrolls under 
   const many = ['1', '2', '3', '4', '5', '6', '7'].map(n => prompt(`p${n}`, `u${n}`)).join('\n')
 
   on('session.usage', () => ({ value: { startedAt: 0, context: { window: 1_000_000 }, rateLimits: [] } }))
-  on('fs.exists', () => ({ value: false }))
+  on('fs.exists', (_, e) => ({ value: e.path === PATH }))
   on('fs.read', () => ({ value: many }))
   on('classic.PostToolUse', () => ({}))
   await $.classic.PostToolUse({ transcript_path: PATH } as never)
@@ -242,6 +242,32 @@ test('above the prompt the list shows the five newest prompts and scrolls under 
   await wheel(9)
   expect(await listed()).toEqual(['3', '4', '5', '6', '7'])
   expect(await pane.find({ type: 'Text', text: /^sum / })).toBeDefined()
+})
+
+test('a prompt submitted before its transcript is written is listed when the turn ends', async ($, on) => {
+  let isWritten = false
+
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 1_000_000 }, rateLimits: [] } }))
+  on('fs.exists', (_, e) => ({ value: e.path === PATH && isWritten }))
+  on('fs.read', () => ({ value: prompt('p1', 'u1') }))
+  on('classic.UserPromptSubmit', () => ({}))
+  on('turn.complete', () => ({ text: '' }))
+
+  await $.classic.UserPromptSubmit({ transcript_path: PATH } as never)
+
+  const pane = await $.ui.mount({
+    plugin: 'token-panel',
+    surface: 'terminal',
+    component: 'Pane',
+    requestId: 'token-panel',
+    props: { title: 'Token panel', isFocused: false, bodyColumns: 49, placement: 'inline' } as never,
+  })
+
+  expect(await pane.find({ type: 'Text', text: 'No prompts yet.' })).toBeDefined()
+
+  isWritten = true
+  await $.turn.complete({ reason: 'answer', answer: '', durationMs: 0, isAborted: false, turnId: 't1' } as never)
+  expect(await pane.find({ key: 'row:u1' })).toBeDefined()
 })
 
 test('/token-panel closes an open pane, opens a closed one, and remembers the choice', async ($, on) => {

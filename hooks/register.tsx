@@ -66,7 +66,8 @@ const refresh = async ($: EngineInterface, seen?: string, isNewPrompt = false): 
       .filter(entry => entry.name.endsWith('.jsonl'))
       .map(entry => $.fs.read(`${folder}/${entry.name}`)),
   )
-  const rows = tally(await $.fs.read(path), agents)
+  // Before the first prompt the transcript is not written yet: count it empty, but keep its path for the next count.
+  const rows = tally((await $.fs.exists(path)) ? await $.fs.read(path) : '', agents)
   const { cost } = await $.session.usage()
 
   await update($, usage, old => settle(old, path, rows, cost?.usd, isNewPrompt))
