@@ -9,7 +9,7 @@ A Claude Code mod that shows, for every prompt of the session, how many tokens i
 Requires Claude Code 2.1.287 or newer.
 
 ```
-/plugin install token-panel --marketplace JSUYA/claude-token-panel
+/plugin install token-panel --marketplace flowmux-ai/claude-token-panel
 ```
 
 ## Use
